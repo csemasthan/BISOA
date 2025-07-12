@@ -1,0 +1,35 @@
+<!-- views/partials/session-timer.ejs -->
+<div id="session-timer-wrap"
+     style="position:fixed;bottom:12px;right:12px;font-size:0.85rem;
+            background:#fff;border:1px solid #dee2e6;border-radius:6px;
+            padding:4px 10px;box-shadow:0 2px 4px rgba(0,0,0,.08);">
+  Session ends in: <span id="session-timer">--:--</span>
+</div>
+
+<script>
+  /* --------------  client-side session timer  -------------- */
+  /* secondsLeft is injected by EJS from the route */
+  let secondsLeft = <%= sessionRemainingSeconds || 0 %>;
+  const FULL      = secondsLeft || 15*60;   // fallback
+
+  function fmt(n){ return String(n).padStart(2,'0'); }
+  function tick(){
+    if (secondsLeft>0) secondsLeft--;
+    const m = fmt(Math.floor(secondsLeft/60));
+    const s = fmt(secondsLeft%60);
+    document.getElementById('session-timer').textContent = `${m}:${s}`;
+  }
+  tick();
+  setInterval(tick,1000);
+
+  async function renew(){
+    try{
+      const r = await fetch('/ping',{credentials:'same-origin'});
+      const j = await r.json();
+      secondsLeft = j.remainingSeconds || FULL;
+    }catch(e){ console.warn('Ping failed'); }
+  }
+  ['click','keydown','mousemove'].forEach(evt=>{
+    document.addEventListener(evt, renew, {passive:true});
+  });
+</script>

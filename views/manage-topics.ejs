@@ -1,0 +1,157 @@
+<%- include('partials/header', { pageTitle: 'Manage Topics', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+
+<h2 class="mb-4">Add a new Topic</h2>
+
+<% if (error)   { %><div class="alert alert-danger"><%= error %></div><% } %>
+<% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+
+<!-- ───────────── Create New Topic ───────────── -->
+<form method="POST" action="/manage-topics/create" class="row g-3 mb-5">
+  <div class="col-md-4"><input  name="title"       class="form-control" placeholder="Title *"  required></div>
+  <div class="col-md-4"><input  name="description" class="form-control" placeholder="Description"></div>
+  <div class="col-md-2">
+    <select name="is_public" class="form-select">
+      <option value="1">Public</option>
+      <option value="0">Private</option>
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Add Topic</button></div>
+</form>
+
+<h2 class="mb-4">Manage existing Topics</h2>
+<!-- ───────────── Search box ───────────── -->
+<input id="search" class="form-control mb-3" placeholder="Search title or description...">
+
+<!-- ───────────── Topic List ───────────── -->
+<table class="table table-bordered align-middle" id="topicTable">
+  <thead class="table-light">
+    <tr>
+      <th style="width:60px">S&nbsp;No</th>
+      <th>Title</th>
+      <th>Description</th>
+      <th style="width:120px">Visibility</th>
+      <th style="width:150px">Actions</th>
+    </tr>
+  </thead>
+  <tbody id="tbody">
+    <% topics.forEach(t => { %>
+      <tr
+        data-title="<%= (t.title || '').toLowerCase() %>"
+        data-desc ="<%= (t.description || '').toLowerCase() %>"
+      >
+        <td></td>
+        <td><%= t.title %></td>
+        <td><%= t.description || '-' %></td>
+        <td><%= t.is_public ? 'Public' : 'Private' %></td>
+        <td>
+          <form action="/manage-topics/delete/<%= t.id %>" method="POST" class="d-inline">
+            <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+          </form>
+          <button class="btn btn-sm btn-secondary"
+                  onclick="populateEdit(<%= t.id %>, '<%- t.title.replace(/'/g,'&#39;') %>',
+                                         '<%- (t.description||'').replace(/'/g,'&#39;') %>',
+                                         <%= t.is_public %>)">
+            Edit
+          </button>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<!-- pagination -->
+<nav class="d-flex justify-content-end">
+  <ul class="pagination mb-0" id="pager"></ul>
+</nav>
+
+<!-- ───────────── Edit Modal ───────────── -->
+<div id="editModal" class="modal" tabindex="-1" style="display:none;">
+  <div class="modal-dialog">
+    <form method="POST" action="/manage-topics/update" class="modal-content">
+      <input type="hidden" name="id" id="editId">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Topic</h5>
+        <button type="button" class="btn-close" onclick="closeEdit()"></button>
+      </div>
+      <div class="modal-body">
+        <input   class="form-control mb-2" name="title"       id="editTitle" required>
+        <textarea class="form-control mb-2" name="description" id="editDesc" rows="3"></textarea>
+        <select  class="form-select" name="is_public" id="editVisibility">
+          <option value="1">Public</option>
+          <option value="0">Private</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary">Update</button>
+        <button type="button" class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</main>
+
+<script>
+/* ---------- pagination & search ---------- */
+const ROWS = Array.from(document.querySelectorAll('#tbody tr'));
+const ROWS_PER_PAGE = 5;
+let curPage = 1;
+
+const pager  = document.getElementById('pager');
+const search = document.getElementById('search');
+
+function rowMatches(row, q){
+  return row.dataset.title.includes(q) || row.dataset.desc.includes(q);
+}
+
+function renderTable(){
+  const q = search.value.toLowerCase();
+  const filtered = ROWS.filter(r=>rowMatches(r,q));
+
+  const totalPages = Math.ceil(filtered.length/ROWS_PER_PAGE)||1;
+  if (curPage > totalPages) curPage = 1;
+
+  /* hide all, then show the slice */
+  ROWS.forEach(r=>r.style.display='none');
+  filtered.forEach((r,i)=>{
+    if (i >= (curPage-1)*ROWS_PER_PAGE && i < curPage*ROWS_PER_PAGE){
+      r.style.display='';
+      r.cells[0].innerText = i+1;   // serial number
+    }
+  });
+
+  /* rebuild pager */
+  pager.innerHTML='';
+  for(let p=1; p<=totalPages; p++){
+    const li=document.createElement('li');
+    li.className='page-item'+(p===curPage?' active':'');
+    li.innerHTML=`<a class="page-link" href="#">${p}</a>`;
+    li.onclick=e=>{e.preventDefault();curPage=p;renderTable();}
+    pager.appendChild(li);
+  }
+}
+search.addEventListener('input',()=>{curPage=1;renderTable();});
+renderTable();
+
+/* ---------- modal helpers ---------- */
+function populateEdit(id,title,desc,pub){
+  editId.value   = id;
+  editTitle.value= title;
+  editDesc.value = desc;
+  editVisibility.value = pub;
+  editModal.style.display='block';
+}
+function closeEdit(){ editModal.style.display='none'; }
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,121 @@
+<%- include('partials/header', { pageTitle: 'Topic Documents', activities }) %>
+
+<div class="container py-5">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h3 class="mb-3">All Topics</h3>
+
+  <table class="table table-bordered table-sm">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Topic Title</th>
+        <th>Description</th>
+        <th>Visibility</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% let visibleIndex = 0; %>
+      <% topics.forEach(t => { %>
+        <% if (t.is_public || t.user_id === userId || canViewAll) { visibleIndex++; %>
+          <tr>
+            <td><%= visibleIndex %></td>
+            <td><%= t.title %></td>
+            <td><%= t.description || "-" %></td>
+            <td><%= t.is_public ? "Public" : "Private" %></td>
+          </tr>
+        <% } %>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <% if (canUpload) { %>
+    <h2 class="mb-4">Add Document Under a Topic</h2>
+    <form action="/topics/upload" method="POST" enctype="multipart/form-data" class="row g-2 mb-5">
+      <div class="col-md-3">
+        <select name="topic_id" class="form-select" required>
+          <option value="">Choose Topic</option>
+          <% topics.forEach(topic => { %>
+            <option value="<%= topic.id %>"><%= topic.title %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-2"><input name="title" class="form-control" placeholder="Title" required></div>
+      <div class="col-md-4"><input name="remarks" class="form-control" placeholder="Remarks"></div>
+      <div class="col-md-2"><input type="file" name="pdf" accept=".pdf" class="form-control" required></div>
+      <div class="col-md-1"><button class="btn btn-primary w-100">Upload</button></div>
+    </form>
+  <% } %>
+
+  <h3 class="mb-3">Browse Documents by Topic</h3>
+
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle" id="docTable">
+      <thead class="table-light">
+        <tr>
+          <th>S No<br><input class="form-control form-control-sm column-search" data-col="0"></th>
+          <th>Topic<br><input class="form-control form-control-sm column-search" data-col="1"></th>
+          <th>Title<br><input class="form-control form-control-sm column-search" data-col="2"></th>
+          <th>Remarks<br><input class="form-control form-control-sm column-search" data-col="3"></th>
+          <th>Uploaded By<br><input class="form-control form-control-sm column-search" data-col="4"></th>
+          <th>Uploaded At<br><input class="form-control form-control-sm column-search" data-col="5"></th>
+          <th>PDF</th>
+          <% if (canDelete) { %><th>Action</th><% } %>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <% let visibleDocIndex = 0; %>
+        <% docs.forEach(d => {
+          const isVisible = d.topic_is_public || d.topic_creator === userId || canViewAll;
+          if (isVisible) { visibleDocIndex++; %>
+            <tr>
+              <td><%= visibleDocIndex %></td>
+              <td><%= d.topic_title %></td>
+              <td><%= d.title %></td>
+              <td><%= d.remarks %></td>
+              <td><%= d.uploader %></td>
+              <td><%= d.uploaded_at.toLocaleString() %></td>
+              <td><a href="/<%= d.filepath %>" target="_blank">View</a></td>
+              <% if (canDelete && d.user_id === userId) { %>
+                <td>
+                  <form action="/topics/delete/<%= d.id %>" method="POST">
+                    <input type="hidden" name="topic_name" value="<%= d.topic_title || 'MISSING' %>">
+                    <button class="btn btn-sm btn-danger" onclick="return confirm('Delete this document?')">Delete</button>
+                  </form>
+                </td>
+              <% } %>
+            </tr>
+          <% } %>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const searchInputs = document.querySelectorAll('.column-search');
+  const table = document.getElementById('docTable');
+  const rows = Array.from(table.querySelectorAll('tbody tr'));
+
+  searchInputs.forEach(input => {
+    input.addEventListener('input', () => {
+      const filters = Array.from(searchInputs).map(i => i.value.toLowerCase());
+
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const match = filters.every((filter, i) => {
+          return !filter || cells[i]?.innerText.toLowerCase().includes(filter);
+        });
+        row.style.display = match ? '' : 'none';
+      });
+    });
+  });
+</script>
+
+<%- include('partials/footer') %>

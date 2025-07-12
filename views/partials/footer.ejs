@@ -1,0 +1,79 @@
+<!-- Add this in your layout.ejs or at the bottom of any page -->
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+
+</head>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  main {
+    flex: 1;
+  }
+
+  footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  .footer-icons a {
+    margin: 0 0.4rem;
+    color: #6c757d;
+    text-decoration: none;
+  }
+
+  .footer-icons a:hover {
+    color: #343a40;
+  }
+</style>
+
+<main class="container">
+  <!-- Page content goes here -->
+</main>
+<!-- views/partials/footer.ejs -->
+<footer class="text-center text-muted mt-auto py-3 border-top">
+  <div>
+    &copy; <%= new Date().getFullYear() %> | Designed and Developed by <strong>Shaik Masthan</strong>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+
+    <a href="https://github.com/csemasthan" target="_blank" class="ms-2">
+      <i class="bi bi-github"></i>
+    </a>
+
+    <% if (typeof sessionRemainingSeconds !== 'undefined' && sessionRemainingSeconds > 0) { %>
+      &nbsp;&nbsp;&nbsp;&nbsp; Session ends in: <span id="session-timer">--:--</span>
+    <% } %>
+  </div>
+</footer>
+
+<% if (typeof sessionRemainingSeconds !== 'undefined' && sessionRemainingSeconds > 0) { %>
+<script>
+  let secondsLeft = <%= sessionRemainingSeconds %>;
+
+  function updateTimerDisplay() {
+    const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+    const secs = String(secondsLeft % 60).padStart(2, '0');
+    document.getElementById('session-timer').textContent = `${mins}:${secs}`;
+  }
+
+  setInterval(() => {
+    if (secondsLeft > 0) secondsLeft--;
+    updateTimerDisplay();
+  }, 1000);
+
+  window.addEventListener('DOMContentLoaded', updateTimerDisplay);
+</script>
+<% } %>
+
+
+
+<!-- Bootstrap Icons CDN (Add this in your <head> if not already included) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+ <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

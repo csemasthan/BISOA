@@ -1,0 +1,111 @@
+<%- include('partials/header', { pageTitle: 'Manage Categories', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Categories</h2>
+
+  <!-- Add / Edit form -->
+  <form id="catForm" class="row g-2 mb-4" action="/categories/add" method="POST">
+    <input type="hidden" name="edit_id" id="edit_id">
+    <div class="col-md-4"><input class="form-control" name="name" placeholder="Category name" required></div>
+    <div class="col-md-2 form-check mt-2">
+      <input class="form-check-input" type="checkbox" name="is_public" id="is_public" checked>
+      <label class="form-check-label" for="is_public">Public</label>
+    </div>
+    <div class="col-md-2">
+      <button id="catSubmit" class="btn btn-primary w-100">Add</button>
+    </div>
+    <div class="col-md-2">
+      <button type="button" id="catCancel" class="btn btn-secondary w-100" style="display:none;">Cancel</button>
+    </div>
+  </form>
+
+  <!-- Categories Table -->
+  <table class="table table-bordered" id="catTable">
+    <thead class="table-light">
+      <tr>
+        <th class="sortable" data-col="name">Name</th>
+        <th class="sortable" data-col="acc">Public?</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <% cats.forEach(c => { %>
+        <tr data-id="<%= c.id %>" data-name="<%= c.name.toLowerCase() %>" data-acc="<%= c.is_public ? 'yes' : 'no' %>">
+          <td><%= c.name %></td>
+          <td><%= c.is_public ? 'Yes' : 'No' %></td>
+          <td class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick='startEdit(<%- JSON.stringify(c) %>)'>Edit</button>
+            <form action="/categories/delete/<%= c.id %>" method="POST"
+                  onsubmit="return confirm('Delete category and ALL its documents?')">
+              <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  // Edit / Cancel logic
+  const form = document.getElementById('catForm');
+  const eId = document.getElementById('edit_id');
+  const sBtn = document.getElementById('catSubmit');
+  const cBtn = document.getElementById('catCancel');
+
+  function startEdit(cat) {
+    eId.value = cat.id;
+    form.name.value = cat.name;
+    form.is_public.checked = !!cat.is_public;
+    sBtn.textContent = 'Save';
+    form.action = `/categories/edit/${cat.id}`;
+    cBtn.style.display = '';
+  }
+
+  cBtn.onclick = () => {
+    form.reset(); eId.value = '';
+    sBtn.textContent = 'Add';
+    form.action = '/categories/add';
+    cBtn.style.display = 'none';
+  };
+
+  // Sorting logic
+  const colMap = { name: 0, acc: 1 };
+  let sortState = { col: 'name', dir: 'asc' };
+
+  document.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+    const col = th.dataset.col;
+    sortState = col === sortState.col ? { col, dir: sortState.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' };
+    draw();
+  });
+
+  function draw() {
+    const rows = [...document.querySelectorAll('#tbody tr')];
+    rows.sort((a, b) => {
+      const va = colMap[sortState.col] === 0 ? a.cells[0].innerText : a.dataset.acc;
+      const vb = colMap[sortState.col] === 0 ? b.cells[0].innerText : b.dataset.acc;
+      return sortState.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+
+    const tb = document.getElementById('tbody');
+    tb.innerHTML = '';
+    rows.forEach(r => tb.appendChild(r));
+
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.classList.toggle('asc', th.dataset.col === sortState.col && sortState.dir === 'asc');
+      th.classList.toggle('desc', th.dataset.col === sortState.col && sortState.dir === 'desc');
+    });
+  }
+
+  draw();
+</script>

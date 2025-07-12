@@ -1,0 +1,63 @@
+<!-- views/dashboard.ejs  –  complete drop-in -->
+<%- include('partials/header', { pageTitle: 'Dashboard', user, activities }) %>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+<style>
+  /* make body stretch full height so footer sticks to bottom */
+  body { display:flex; flex-direction:column; min-height:100vh; }
+  main { flex:1; }
+
+  .tile-grid {
+    display:grid;
+    gap:1rem;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  }
+  .tile {
+    padding:1.6rem;
+    background:#f8f9fa;
+    border:1px solid #dee2e6;
+    border-radius:12px;
+    text-align:center;
+    text-decoration:none;
+    color:#212529;
+    transition:transform .2s, background .2s;
+    position:relative;
+  }
+  .tile:hover { background:#e9ecef; transform:translateY(-4px); }
+  .tile i { font-size:2rem; margin-bottom:.5rem; display:block; }
+  .highlight { border:2px solid #dc3545; background:#fff5f5; }
+</style>
+
+<main class="container py-4">
+
+  <h2 class="mb-4">Welcome, <%= userName %></h2>
+
+  <div class="tile-grid">
+    <% tiles
+      .filter(tile => tile.visible)
+      .sort((a, b) => b.urgency - a.urgency)
+      .forEach(tile => { %>
+      <a href="<%= tile.url %>" class="tile <%= tile.highlight ? 'highlight' : '' %>" title="<%= tile.tooltip %>">
+        <i class="bi <%= tile.icon %>"></i>
+        <div><%= tile.title %></div>
+        <% if (tile.badge) { %>
+          <span class="badge bg-danger"><%= tile.badge %></span>
+        <% } %>
+      </a>
+    <% }); %>
+  </div>
+  
+</main>
+
+<%- include('partials/footer') %>
+
+
+<!-- Bootstrap JS bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap Icons (if not already in header) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script>
+  document.querySelectorAll('.tile').forEach(el => {
+    new bootstrap.Tooltip(el);
+  });
+</script>

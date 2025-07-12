@@ -1,0 +1,119 @@
+<%- include('partials/header', { pageTitle: 'Moderate Topic Proposals', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  <h2 class="mb-4">Pending Topic Proposals</h2>
+
+  <!-- Column-search inputs are in the 2nd header row -->
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle" id="propTable">
+      <thead class="table-light">
+        <tr>
+          <th style="width:60px">#</th>
+          <th>Title</th>
+          <th>Description</th>
+          <th style="width:100px">Public?</th>
+          <th>Proposed&nbsp;By</th>
+          <th>Remarks</th>
+          <th>Action</th>
+        </tr>
+        <tr>
+          <th><input class="form-control form-control-sm col-search" data-col="0"></th>
+          <th><input class="form-control form-control-sm col-search" data-col="1"></th>
+          <th><input class="form-control form-control-sm col-search" data-col="2"></th>
+          <th><input class="form-control form-control-sm col-search" data-col="3"></th>
+          <th><input class="form-control form-control-sm col-search" data-col="4"></th>
+          <th></th><th></th>
+        </tr>
+      </thead>
+
+      <tbody id="tbody">
+        <% pending.forEach((p, i) => { %>
+          <tr>
+            <form action="/moderate-topics/<%= p.id %>" method="POST">
+              <td></td>
+              <td>
+                <input name="title" class="form-control" value="<%= p.title %>">
+              </td>
+              <td>
+                <input name="description" class="form-control" value="<%= p.description %>">
+              </td>
+              <td>
+                <select name="is_public" class="form-select">
+                  <option value="1" <%= p.is_public ? 'selected' : '' %>>Yes</option>
+                  <option value="0" <%= !p.is_public ? 'selected' : '' %>>No</option>
+                </select>
+              </td>
+              <td><%= p.proposer %></td>
+              <td class="d-flex flex-column flex-md-row gap-2">
+                <input type="text" name="mod_remarks" class="form-control mb-md-0" placeholder="Moderator remarks">
+              </td>
+              <td>
+                <button name="action" value="approve" class="btn btn-sm btn-success">Approve</button>
+                <button name="action" value="reject"  class="btn btn-sm btn-danger">Reject</button>
+              </td>
+            </form>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="d-flex justify-content-end">
+    <ul class="pagination" id="pager"></ul>
+  </nav>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  /* ---------- Client-side column search + pagination ---------- */
+  const ROWS_PER_PAGE = 10;
+  let curPage = 1;
+
+  const rows        = Array.from(document.querySelectorAll('#tbody tr'));
+  const pager       = document.getElementById('pager');
+  const searchBoxes = document.querySelectorAll('.col-search');
+
+  function rowMatches(row) {
+    return Array.from(searchBoxes).every(box => {
+      const idx = +box.dataset.col;
+      const filter = box.value.trim().toLowerCase();
+      if (!filter) return true;
+      const cell = row.cells[idx];
+      return cell && cell.innerText.toLowerCase().includes(filter);
+    });
+  }
+
+  function renderTable() {
+    const filtered = rows.filter(rowMatches);
+    const pages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+    if (curPage > pages) curPage = 1;
+
+    /* renumber + show/hide rows */
+    let visibleIdx = 0;
+    rows.forEach(r => r.style.display = 'none');
+
+    filtered.forEach((row, i) => {
+      if (i >= (curPage - 1) * ROWS_PER_PAGE && i < curPage * ROWS_PER_PAGE) {
+        row.style.display = '';
+        row.cells[0].innerText = ++visibleIdx;
+      }
+    });
+
+    /* draw paginator */
+    pager.innerHTML = '';
+    for (let p = 1; p <= pages; p++) {
+      const li = document.createElement('li');
+      li.className = 'page-item' + (p === curPage ? ' active' : '');
+      li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+      li.onclick = e => { e.preventDefault(); curPage = p; renderTable(); };
+      pager.appendChild(li);
+    }
+  }
+
+  /* events */
+  searchBoxes.forEach(b => b.addEventListener('input', () => { curPage = 1; renderTable(); }));
+
+  /* first draw */
+  renderTable();
+</script>

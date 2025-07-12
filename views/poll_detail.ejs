@@ -1,0 +1,212 @@
+<%- include('partials/header', { pageTitle: 'Poll Detail', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  <h3><%= poll.question %></h3>
+
+  <p>
+
+    Opens: <strong><script>
+      const openTime = '<%= poll.open_time %>';
+      document.write(formatDateTime(openTime));
+    </script></strong><br>
+    
+    Closes: <strong><script>
+      const closeTime = '<%= poll.close_time %>';
+      document.write(formatDateTime(closeTime));
+
+    </script></strong><br>
+    
+    
+
+    
+    Status:
+    <strong class="<%= active === 'Upcoming' ? 'text-warning' : (active === 'Started' ? 'text-success' : 'text-danger') %>">
+      <%= active === 'Upcoming' ? 'YET TO BEGIN' : (active === 'Started' ? 'OPEN' : 'CLOSED') %>
+    </strong>
+  </p>
+
+  <p>
+    Participation: <strong><%= participationPercentage %>%</strong>
+    (<%= totalVotes %> voter<%= totalVotes !== 1 ? 's' : '' %>)
+  </p>
+
+  <% if (canVote) { %>
+    <% if (active === 'Started' && !hasVoted) { %>
+      <!-- Voting Form -->
+      <form id="voteForm" action="/polls/<%= poll.id %>/vote" method="POST" class="mb-4">
+        
+        <% questions.forEach((question) => { %>
+          <div id="question_<%= question.id %>">
+            <h5><%= question.question %></h5>
+            <div class="options">
+              <% options.forEach((option) => { %>
+                <% if (option.question_id === question.id) { %>
+                  <div class="form-check">
+                    <input type="<%= question.select_type === 'multi' ? 'checkbox' : 'radio' %>"
+                           name="options_<%= question.id %><%= question.select_type === 'multi' ? '[]' : '' %>"
+                           value="<%= option.id %>"
+                           id="opt_<%= question.id %>_<%= option.id %>"
+                           class="form-check-input">
+                    <label for="opt_<%= question.id %>_<%= option.id %>" class="form-check-label">
+                      <%= option.option_text %>
+                    </label>
+                  </div>
+                <% } %>
+              <% }) %>
+            </div>
+          </div>
+        <% }); %>
+
+        <button class="btn btn-primary mt-2" id="submitBtn">Cast Vote</button>
+      </form>
+
+      <!-- Preview Modal for Selected Options -->
+      <div id="previewModal" class="modal fade" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="previewModalLabel">Review Your Selections</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div id="selectedOptionsPreview"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" id="confirmVote">Confirm Vote</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        document.getElementById('voteForm').onsubmit = e => {
+          
+          let isValid = true;
+          let selectedOptions = [];
+          let selectedForQuestion = [];
+          let questionElement;
+          let questionOptions;
+          let isMultiSelect;
+          let optionName;
+
+          // Loop through each question and check if at least one option is selected
+          <% questions.forEach((question) => { %>
+            
+            selectedForQuestion = [];
+            
+            // Get question element by ID
+            questionElement = document.getElementById('question_<%= question.id %>');
+            if (!questionElement) {
+              isValid = false;
+              return;
+            }
+
+            // Get selected options for multi-select questions (checkboxes)
+            questionOptions = questionElement.querySelectorAll('input[type="checkbox"]:checked');
+            isMultiSelect = "<%= question.select_type %>" === "multi";
+            optionName = `options_<%= question.id %>`;
+
+            if (isMultiSelect) {
+              if (questionOptions.length === 0) {               
+                isValid = false;
+              }
+            } else {
+              // For single-select (radio button), check if at least one option is selected
+              const selectedOption = document.querySelector(`input[name="${optionName}"]:checked`);
+              if (selectedOption) {
+                selectedForQuestion.push(selectedOption.nextElementSibling.textContent.trim());                
+              } else {
+                isValid = false;
+              }
+            }
+
+            // Store selected options for preview
+            if (selectedForQuestion.length > 0 || questionOptions.length > 0) {
+              selectedOptions.push({
+                question: "<%= question.question %>",
+                options: selectedForQuestion.concat(Array.from(questionOptions).map(i => i.nextElementSibling.textContent.trim()))
+              });
+            }
+          <% }); %>
+
+          // If validation fails, show an error and prevent form submission
+          if (!isValid) {
+            alert('Please select at least one option for each question.');
+            e.preventDefault();
+            return;
+          }
+          // Show the selected options in the preview modal
+          const previewContainer = document.getElementById('selectedOptionsPreview');
+          previewContainer.innerHTML = ''; // Clear previous preview
+
+          selectedOptions.forEach(option => {
+            const questionPreview = document.createElement('div');
+            questionPreview.innerHTML = `<strong>${option.question}</strong>: ${option.options.join(', ')}`;
+            previewContainer.appendChild(questionPreview);
+          });
+
+          // Show the preview modal
+          const myModal = new bootstrap.Modal(document.getElementById('previewModal'));
+          myModal.show();
+
+          // Prevent form submission to allow user to confirm
+          e.preventDefault();
+        };
+
+        // Confirm the vote after preview
+        document.getElementById('confirmVote').onclick = () => {
+          document.getElementById('voteForm').submit();
+        };
+      </script>
+
+    <% } else { %>
+      <p class="<%= hasVoted ? 'text-success' : 'text-muted' %>">
+        <% if (active === 'Upcoming') { %>Voting not yet open.
+        <% } else if (hasVoted) { %>You have voted.
+        <% } else { %>Voting closed.
+        <% } %>
+      </p>
+    <% } %>
+  <% } else { %>
+    <p class="text-muted">You are not allowed to participate in this poll.</p>
+  <% } %>
+
+  <% if (showChart || active === 'Closed') { %>
+    <!-- Show chart whether the user is allowed to vote or not -->
+    <canvas id="chart" style="max-width:650px;"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+      const labels = <%- JSON.stringify(options.map(o => o.option_text)) %>;
+      const votes  = <%- JSON.stringify(options.map(o => o.votes)) %>;
+      const total  = <%= totalVotes %>;
+      new Chart(document.getElementById('chart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Voters', data: votes }]
+        },
+        options: {
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const v = ctx.parsed.y,
+                        pct = total ? Math.round(100 * v / total) : 0;
+                  return `${v} voter${v !== 1 ? 's' : ''} – ${pct}%`;
+                }
+              }
+            }
+          },
+          scales: { y: { beginAtZero: true, precision: 0 } }
+        }
+      });
+    </script>
+  <% } else if (active === 'Started') { %>
+    <p class="text-muted">Results hidden until poll closes.</p>
+  <% } %>
+
+  <a href="/polls" class="btn btn-link mt-4">← Back</a>
+</main>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,285 @@
+<%- include('partials/header', { pageTitle: 'Minutes of Meeting', activities }) %>
+
+
+
+<main class="container py-5 flex-grow-1">
+  <!-- Flash Message for Errors or Success -->
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(msg => { %>
+      <div class="alert alert-<%= msg.type %>">
+        <%= msg.text %>
+      </div>
+    <% }) %>
+  <% } %>
+<!-- ▾▾ UPLOAD / EDIT FORM ------------------------------------------------ -->
+<% if (canUpload) { %>
+<h2 class="mb-4">Upload / Edit PDF</h2>
+
+<form id="uploadForm" action="/documents/upload" method="POST"
+      enctype="multipart/form-data" class="row g-2 mb-5">
+
+  <input type="hidden" name="edit_id" id="edit_id">
+
+  <div class="col-md-2">
+    <select name="category_id" class="form-select" required>
+      <option value="">Category…</option>
+      <% cats.forEach(c=>{ %>
+        <option value="<%= c.id %>"><%= c.name %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div class="col-md-3"><input name="title"   class="form-control" placeholder="Title" required></div>
+  <div class="col-md-4"><input name="remarks" class="form-control" placeholder="Remarks"></div>
+  <div class="col-md-2"><input type="date" name="doc_date" class="form-control" required></div>
+
+  <div class="col-md-3"><input type="file" name="pdf" accept=".pdf" class="form-control" id="pdf_input"></div>
+
+  <div class="col-md-2 form-check">
+    <input class="form-check-input" type="checkbox" name="is_private" id="is_private">
+    <label class="form-check-label" for="is_private">Private</label>
+  </div>
+
+  <div class="col-md-2"><button id="submitBtn" class="btn btn-primary w-100">Upload</button></div>
+  <div class="col-md-2"><button type="button" id="cancelBtn" class="btn btn-secondary w-100" style="display:none;">Cancel&nbsp;Edit</button></div>
+</form>
+<% } %>
+
+<!-- ▾▾ HEADING + SERVER-SIDE CATEGORY FILTER ------------------------------ -->
+<div class="d-flex align-items-center gap-3 mb-3">
+  <h3 class="mb-0">Documents</h3>
+  <form method="get" action="/documents">
+    <select name="category" class="form-select" onchange="this.form.submit()">
+      <option value="0">All categories</option>
+      <% cats.forEach(c=>{ %>
+        <option value="<%= c.id %>" <%= currentCat==c.id?"selected":"" %>>
+          <%= c.name %> <%= c.is_public ? "" : "(Private)" %>
+        </option>
+      <% }) %>
+    </select>
+  </form>
+</div>
+
+<!-- ▾▾ TABLE ------------------------------------------------------------- -->
+<table class="table table-bordered align-middle" id="docTable">
+  <thead class="table-light">
+    <tr>
+      <th class="sortable" data-col="sno">S&nbsp;No</th>
+      <th class="sortable" data-col="category">Category</th>
+      <% if (canUpload) { %><th class="sortable" data-col="cat_acc">Cat&nbsp;Access</th><% } %>
+      <th class="sortable" data-col="title">Title</th>
+      <th class="sortable" data-col="remarks">Remarks</th>
+      <th class="sortable" data-col="doc_date">Meeting&nbsp;Date</th>
+      <th class="sortable" data-col="uploader">Uploaded&nbsp;By</th>
+      <th class="sortable" data-col="uploaded_at">Uploaded&nbsp;At</th>
+      <% if (canUpload) { %><th class="sortable" data-col="access">Doc&nbsp;Access</th><% } %>
+      <th>PDF</th>
+      <% if (canDelete) { %><th>Action</th><% } %>
+    </tr>
+
+    <!-- filter row -->
+    <tr>
+      <th></th>
+      <th><input id="f-cat"  class="form-control form-control-sm"></th>
+
+      <% if (canUpload) { %>
+      <th>
+        <select id="f-catacc" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+      </th>
+      <% } %>
+
+      <th><input id="f-title" class="form-control form-control-sm"></th>
+      <th><input id="f-rem"   class="form-control form-control-sm"></th>
+      <th><input id="f-doc"   type="date" class="form-control form-control-sm"></th>
+      <th><input id="f-user"  class="form-control form-control-sm"></th>
+      <th><input id="f-up"    type="date" class="form-control form-control-sm"></th>
+
+      <% if (canUpload) { %>
+      <th>
+        <select id="f-access" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+      </th>
+      <% } %>
+
+      <th></th>
+      <% if (canDelete) { %><th></th><% } %>
+    </tr>
+  </thead>
+
+  <tbody id="tbody">
+  <% docs.forEach(d=>{ const upIso=d.uploaded_at.toISOString(); const dd=d.doc_date.toISOString(); %>
+    <tr id="row-<%= d.id %>" data-rowid="<%= d.id %>"
+        data-category="<%= d.category.toLowerCase() %>"
+        data-cat_acc="<%= d.is_public ? 'public' : 'private' %>"
+        data-title="<%= d.title.toLowerCase() %>"
+        data-remarks="<%= (d.remarks||'').toLowerCase() %>"
+        data-uploader="<%= d.uploader.toLowerCase() %>"
+        data-doc_date="<%= dd %>"
+        data-uploaded_at="<%= upIso %>"
+        data-access="<%= d.is_private ? 'private' : 'public' %>">
+
+      <td></td>
+      <td><%= d.category %></td>
+      <% if (canUpload) { %><td><%= d.is_public ? 'Public' : 'Private' %></td><% } %>
+      <td><%= d.title %></td>
+      <td><%= d.remarks %></td>
+      <td><%= dd.slice(0,10) %></td>
+      <td><%= d.uploader %></td>
+      <td><%= upIso.slice(0,10) %></td>
+
+      <% if (canUpload) { %><td><%= d.is_private ? 'Private':'Public' %></td><% } %>
+
+      <td><a href="/<%= d.filepath %>" target="_blank">View</a></td>
+
+      <% if (canDelete && d.user_id === userId) { %>
+      <td class="d-flex gap-1">
+        <button class="btn btn-sm btn-outline-secondary"
+          onclick='enterEditMode(<%- JSON.stringify({
+            id:d.id,title:d.title,remarks:d.remarks||"",doc_date:dd,
+            category_id:d.category_id,is_private:d.is_private
+          }) %>)'>Edit</button>
+
+        <form action="/documents/delete/<%= d.id %>" method="POST"
+              onsubmit="return confirm('Delete?')">
+          <button class="btn btn-sm btn-danger">Delete</button>
+        </form>
+      </td>
+      <% } %>
+    </tr>
+  <% }) %>
+  </tbody>
+</table>
+
+<nav class="d-flex justify-content-end">
+  <ul class="pagination" id="pager"></ul>
+</nav>
+
+<script>
+/* ============  TABLE LOGIC (filter / sort / pagination)  ============ */
+const ROWS_PER_PAGE = 10;
+let curPage = 1, curSort = {col:'uploaded_at', dir:'desc'};
+const pager = document.getElementById('pager');
+
+const filters = {
+  cat  : document.getElementById('f-cat'),
+  title: document.getElementById('f-title'),
+  rem  : document.getElementById('f-rem'),
+  doc  : document.getElementById('f-doc'),
+  user : document.getElementById('f-user'),
+  up   : document.getElementById('f-up'),
+  <% if (canUpload) { %>
+  catacc: document.getElementById('f-catacc'),
+  access: document.getElementById('f-access')
+  <% } %>
+};
+
+const allRows = [...document.querySelectorAll('#tbody tr')];
+
+const colIdx = {
+  sno:0, category:1,
+  <% if (canUpload) { %>cat_acc:2, title:3, remarks:4, doc_date:5, uploader:6, uploaded_at:7, access:8<% } else { %>
+  title:2, remarks:3, doc_date:4, uploader:5, uploaded_at:6<% } %>
+};
+
+function rowMatches(row){
+  if (filters.cat.value && !row.dataset.category.includes(filters.cat.value.toLowerCase())) return false;
+  if (filters.title.value && !row.dataset.title.includes(filters.title.value.toLowerCase())) return false;
+  if (filters.rem.value && !row.dataset.remarks.includes(filters.rem.value.toLowerCase())) return false;
+  if (filters.doc.value && !row.dataset.doc_date.startsWith(filters.doc.value)) return false;
+  if (filters.user.value && !row.dataset.uploader.includes(filters.user.value.toLowerCase())) return false;
+  if (filters.up.value && !row.dataset.uploaded_at.startsWith(filters.up.value)) return false;
+
+  <% if (canUpload) { %>
+  if (filters.catacc.value && row.dataset.cat_acc !== filters.catacc.value) return false;
+  if (filters.access.value && row.dataset.access !== filters.access.value) return false;
+  <% } %>
+
+  return true;
+}
+
+function sortRows(list){
+  const {col, dir} = curSort;
+  return list.slice().sort((a,b)=>{
+    let va, vb;
+    if (col === 'uploaded_at' || col === 'doc_date'){ va=a.dataset[col]; vb=b.dataset[col]; }
+    else if (col === 'access' || col === 'cat_acc'){ va=a.dataset[col]; vb=b.dataset[col]; }
+    else if (col === 'sno'){ return 0; }
+    else { va=a.cells[colIdx[col]].innerText.toLowerCase(); vb=b.cells[colIdx[col]].innerText.toLowerCase(); }
+    return dir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
+}
+
+function render(){
+  const matched = sortRows(allRows.filter(rowMatches));
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  matched.forEach((r,i)=>{ r.cells[0].innerText = i+1; tbody.appendChild(r); });
+
+  const pages = Math.max(1, Math.ceil(matched.length / ROWS_PER_PAGE));
+  if (curPage > pages) curPage = 1;
+  matched.forEach((r,i)=> r.style.display = (i>=((curPage-1)*ROWS_PER_PAGE)&&i<curPage*ROWS_PER_PAGE)?'':'none');
+
+  pager.innerHTML='';
+  for(let p=1;p<=pages;p++){
+    const li=document.createElement('li');
+    li.className='page-item '+(p===curPage?'active':'');
+    li.innerHTML=`<a class="page-link" href="#">${p}</a>`;
+    li.onclick=e=>{e.preventDefault();curPage=p;render();};
+    pager.appendChild(li);
+  }
+  document.querySelectorAll('th.sortable').forEach(th=>{
+    th.classList.toggle('asc', th.dataset.col===curSort.col && curSort.dir==='asc');
+    th.classList.toggle('desc',th.dataset.col===curSort.col && curSort.dir==='desc');
+  });
+}
+
+/* filter change */
+Object.values(filters).forEach(inp=> inp?.addEventListener('input',()=>{curPage=1;render()}));
+/* sort click */
+document.querySelectorAll('th.sortable').forEach(th=> th.onclick=()=>{
+  const c=th.dataset.col;
+  curSort = c===curSort.col ? {col:c,dir:(curSort.dir==='asc'?'desc':'asc')} : {col:c,dir:'asc'};
+  render();
+});
+render();
+document.getElementById('pdf_input').required = true;
+
+/* ============  EDIT / CANCEL LOGIC  ============ */
+const form = document.getElementById('uploadForm');
+const editId = document.getElementById('edit_id');
+const submitBtn = document.getElementById('submitBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+
+function enterEditMode(d){
+  editId.value = d.id;
+  form.title.value = d.title;
+  form.remarks.value = d.remarks;
+  form.doc_date.value = d.doc_date.slice(0,10);
+  form.category_id.value = d.category_id;
+  document.getElementById('is_private').checked = d.is_private;
+
+  submitBtn.textContent = 'Save';
+  submitBtn.classList.replace('btn-primary','btn-success');
+  cancelBtn.style.display = '';
+  document.getElementById('pdf_input').required = false;
+
+}
+cancelBtn.onclick = () => {
+  form.reset();
+  editId.value = '';
+  submitBtn.textContent = 'Upload';
+  submitBtn.classList.replace('btn-success','btn-primary');
+  cancelBtn.style.display = 'none';
+  document.getElementById('pdf_input').required = true;
+
+};
+</script>
+</main>
+<%- include('partials/footer') %>

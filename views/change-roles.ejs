@@ -1,0 +1,143 @@
+<%- include('partials/header', { pageTitle: 'Change User Roles', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  <!-- Flash Message for Errors or Success -->
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(msg => { %>
+      <div class="alert alert-<%= msg.type %>">
+        <%= msg.text %>
+      </div>
+    <% }) %>
+  <% } %>
+  <h2 class="mb-3">Change User Role</h2>
+
+  <% if (success) { %><div class="alert alert-success"><%= success %></div><% } %>
+  <% if (error)   { %><div class="alert alert-danger"><%= error   %></div><% } %>
+
+  <!-- 🔍 global search -->
+  <div class="mb-3">
+    <input id="searchGlobal" class="form-control" placeholder="Global search (name / email)">
+  </div>
+
+  <table class="table table-bordered align-middle" id="userTable">
+    <thead class="table-light">
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Current Role</th>
+        <th>Assign New Role</th>
+        <th>Action</th>
+      </tr>
+      <!-- column-wise filter row -->
+      <tr>
+        <th><input id="f-name"  class="form-control form-control-sm"></th>
+        <th><input id="f-email" class="form-control form-control-sm"></th>
+        <th>
+          <select id="f-role" class="form-select form-select-sm">
+            <option value="">All</option>
+            <% roles.forEach(r=>{ %>
+              <option value="<%= r.name.toLowerCase() %>"><%= r.name %></option>
+            <% }) %>
+          </select>
+        </th>
+        <th></th><th></th>
+      </tr>
+    </thead>
+
+    <tbody id="userBody">
+      <% users.forEach(u => { %>
+        <tr class="u-row"
+            data-name ="<%= u.name.toLowerCase() %>"
+            data-email="<%= u.email.toLowerCase() %>"
+            data-role ="<%= u.role_name.toLowerCase() %>">
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><%= u.role_name %></td>
+          <td>
+            <form action="/change-role" method="POST" class="d-flex">
+              <input type="hidden" name="userId"    value="<%= u.id %>">
+              <input type="hidden" name="oldRoleId" value="<%= u.role_id %>">
+              <select name="newRoleId" class="form-select me-2">
+                <% roles.forEach(r => { %>
+                  <option value="<%= r.id %>" <%= r.id === u.role_id ? 'selected' : '' %>>
+                    <%= r.name %>
+                  </option>
+                <% }) %>
+              </select>
+          </td>
+          <td><button class="btn btn-primary btn-sm">Save</button></form></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <!-- pagination -->
+  <nav class="d-flex justify-content-end mt-3">
+    <ul class="pagination mb-0" id="pager"></ul>
+  </nav>
+
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+/* ---------------- GLOBALS ---------------- */
+const ROWS_PER_PAGE = 5;
+let curPage = 1;
+
+/* -------- get DOM handles -------- */
+const rows    = Array.from(document.querySelectorAll('.u-row'));
+const pager   = document.getElementById('pager');
+const gSearch = document.getElementById('searchGlobal');
+
+/* column-wise filter inputs */
+const filt = {
+  name : document.getElementById('f-name'),
+  email: document.getElementById('f-email'),
+  role : document.getElementById('f-role')
+};
+
+/* ------------- helpers ------------- */
+function rowMatches(row){
+  /* global search first */
+  const gq = gSearch.value.trim().toLowerCase();
+  if (gq && !(row.dataset.name.includes(gq) || row.dataset.email.includes(gq))) return false;
+
+  /* per-column filters */
+  if (filt.name.value && !row.dataset.name .includes(filt.name.value.toLowerCase()))  return false;
+  if (filt.email.value&& !row.dataset.email.includes(filt.email.value.toLowerCase())) return false;
+  if (filt.role.value && row.dataset.role !== filt.role.value)                        return false;
+  return true;
+}
+
+function render(){
+  const vis = rows.filter(rowMatches);
+
+  /* pagination calc */
+  const pages = Math.max(1, Math.ceil(vis.length / ROWS_PER_PAGE));
+  if (curPage > pages) curPage = 1;
+
+  /* hide / show rows */
+  rows.forEach(r => r.style.display = 'none');
+  vis.forEach((r, idx) => {
+    if (idx >= (curPage-1)*ROWS_PER_PAGE && idx < curPage*ROWS_PER_PAGE) r.style.display = '';
+  });
+
+  /* rebuild pager */
+  pager.innerHTML = '';
+  for(let p=1; p<=pages; p++){
+    const li = document.createElement('li');
+    li.className = 'page-item ' + (p===curPage ? 'active':'');
+    li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+    li.onclick = e => { e.preventDefault(); curPage = p; render(); };
+    pager.appendChild(li);
+  }
+}
+
+/* ------------- bind events ------------- */
+[gSearch, filt.name, filt.email].forEach(inp => inp.addEventListener('input', ()=>{curPage=1;render();}));
+filt.role.addEventListener('change', ()=>{curPage=1;render();});
+
+/* initial draw */
+window.addEventListener('DOMContentLoaded', render);
+</script>

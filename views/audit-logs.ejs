@@ -1,0 +1,109 @@
+<%- include('partials/header', { pageTitle: 'Audit Logs', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  <h2 class="mb-4">Audit Logs</h2>
+
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Description</th>
+      </tr>
+      <tr>
+        <th><input type="date" class="form-control form-control-sm" id="f-date"></th>
+        <th><input type="text" class="form-control form-control-sm" id="f-user" placeholder="User..."></th>
+        <th><input type="text" class="form-control form-control-sm" id="f-action" placeholder="Action..."></th>
+        <th><input type="text" class="form-control form-control-sm" id="f-desc" placeholder="Description..."></th>
+      </tr>
+    </thead>
+    <tbody id="logTableBody">
+      <% logs.forEach(log => {
+        const dateStr = new Date(log.created_at).toLocaleString();
+        const dateSearchable = new Date(log.created_at).toISOString().slice(0, 10);
+      %>
+        <tr class="log-row"
+            data-date="<%= dateSearchable %>"
+            data-display="<%= dateStr.toLowerCase() %>"
+            data-user="<%= log.performed_by_name.toLowerCase() %>"
+            data-action="<%= log.action_type.toLowerCase() %>"
+            data-desc="<%= log.description.toLowerCase() %>">
+          <td><%= dateStr %></td>
+          <td><%= log.performed_by_name %></td>
+          <td><%= log.action_type %></td>
+          <td><%= log.description %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <div id="paginationControls" class="mt-4"></div>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  const rowsPerPage = 20;
+  let currentPage = 1;
+
+  const filters = {
+    date: document.getElementById("f-date"),
+    user: document.getElementById("f-user"),
+    action: document.getElementById("f-action"),
+    desc: document.getElementById("f-desc")
+  };
+
+  function rowMatches(row) {
+    if (filters.date.value && !row.dataset.date.startsWith(filters.date.value)) return false;
+    if (filters.user.value && !row.dataset.user.includes(filters.user.value.toLowerCase())) return false;
+    if (filters.action.value && !row.dataset.action.includes(filters.action.value.toLowerCase())) return false;
+    if (filters.desc.value && !row.dataset.desc.includes(filters.desc.value.toLowerCase())) return false;
+    return true;
+  }
+
+  function getFilteredRows() {
+    const rows = Array.from(document.querySelectorAll(".log-row"));
+    return rows.filter(rowMatches);
+  }
+
+  function renderPagination(filtered) {
+    const totalPages = Math.ceil(filtered.length / rowsPerPage);
+    const container = document.getElementById("paginationControls");
+    container.innerHTML = "";
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = i;
+      btn.className = "btn btn-sm mx-1 " + (i === currentPage ? "btn-primary" : "btn-outline-primary");
+      btn.onclick = () => {
+        currentPage = i;
+        paginate(filtered);
+        renderPagination(filtered);
+      };
+      container.appendChild(btn);
+    }
+  }
+
+  function paginate(filtered) {
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+
+    document.querySelectorAll(".log-row").forEach(row => row.style.display = "none");
+    filtered.slice(start, end).forEach(row => row.style.display = "");
+  }
+
+  function filterAndPaginate() {
+    currentPage = 1;
+    const filtered = getFilteredRows();
+    paginate(filtered);
+    renderPagination(filtered);
+  }
+
+  Object.values(filters).forEach(input => {
+    input.addEventListener("input", filterAndPaginate);
+  });
+
+  window.addEventListener("DOMContentLoaded", filterAndPaginate);
+</script>

@@ -1,0 +1,23 @@
+<%- include('partials/header', { pageTitle: 'Verify OTP', user: null, activities: [] }) %>
+
+<main class="container py-5" style="max-width: 400px;">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Enter OTP</h2>
+
+  <form method="post" action="/verify-otp">
+    <input type="hidden" name="email" value="<%= email %>">
+    <div class="mb-3">
+      <input name="otp" class="form-control" placeholder="Enter OTP" required />
+    </div>
+    <button class="btn btn-primary w-100">Verify OTP</button>
+  </form>
+</main>
+
+<%- include('partials/footer') %>

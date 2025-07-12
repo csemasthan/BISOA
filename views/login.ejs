@@ -1,0 +1,27 @@
+<%- include('partials/header', { pageTitle: 'Login', user: null, activities: [] }) %>
+
+
+<main class="container py-5" style="max-width: 400px;">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Login</h2>
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <form method="post" action="/login" class="mb-3">
+    <input name="email" type="email" placeholder="Email" class="form-control mb-2" required>
+    <input name="password" type="password" placeholder="Password" class="form-control mb-3" required>
+    <button class="btn btn-primary w-100">Login</button>
+  </form>
+  <div class="text-end">
+    <a href="/forgot">Forgot Password?</a>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

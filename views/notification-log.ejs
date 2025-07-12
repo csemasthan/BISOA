@@ -1,0 +1,60 @@
+<%- include('partials/header', { pageTitle: 'Notification Log', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+
+  <h2 class="mb-4">Sent / Scheduled Notifications</h2>
+
+  <!-- Flash Message for Errors or Success -->
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(msg => { %>
+      <div class="alert alert-<%= msg.type %>">
+        <%= msg.text %>
+      </div>
+    <% }) %>
+  <% } %>
+
+  <table class="table table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>ID</th>
+        <th>When</th>
+        <th>Channel</th>
+        <th>Subject</th>
+        <th>Recipients</th>
+        <th>Attachment</th>
+        <th>Sender</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% logs.forEach(l => {
+           const sched = new Date(l.scheduled_at);
+      %>
+        <tr>
+          <td><%= l.id %></td>
+          <td><%= sched.toLocaleString() %></td>
+          <td><%= l.channel %></td>
+          <td><%= l.subject %></td>
+          <td style="max-width:250px; white-space: pre-line;"><%= l.recipients %></td>
+          <td>
+            <% if (l.pdf_path) { %>
+              <a target="_blank" href="/<%= l.pdf_path %>">PDF</a>
+            <% } else { %>-<% } %>
+          </td>
+          <td><%= l.sender %></td>
+          <td>
+            <% if (sched > new Date()) { %>
+              <form method="POST" action="/notifications/cancel/<%= l.id %>"
+                    onsubmit="return confirm('Cancel this scheduled job?')">
+                <button class="btn btn-sm btn-danger">Cancel</button>
+              </form>
+            <% } else { %>-<% } %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+</main>
+
+<%- include('partials/footer') %>

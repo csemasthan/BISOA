@@ -1,0 +1,153 @@
+<%- include('partials/header', { pageTitle: 'Send Notification', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Send Notification</h2>
+
+  <form class="row g-3 mb-4" method="POST" action="/notifications" enctype="multipart/form-data">
+    <!-- Subject / channels -->
+    <div class="col-md-6"><input required name="subject" class="form-control" placeholder="Subject"></div>
+    <div class="col-md-6 d-flex gap-3 align-items-center">
+      <label class="form-check">
+        <input type="checkbox" class="form-check-input" name="channel" value="EMAIL" checked> Email
+      </label>
+      <label class="form-check">
+        <input type="checkbox" class="form-check-input" name="channel" value="TEXT"> In-App
+      </label>
+    </div>
+
+    <!-- Message body -->
+    <div class="col-12">
+      <textarea id="email-body" name="body" class="form-control"></textarea>
+      <script src="https://cdn.ckeditor.com/ckeditor5/41.0.0/classic/ckeditor.js"></script>
+      <script>ClassicEditor.create(document.querySelector('#email-body'));</script>
+    </div>
+
+    <!-- Attachment -->
+    <div class="col-md-6">
+      <label class="form-label">Attach PDF (optional)</label>
+      <input type="file" name="pdf" accept="application/pdf" class="form-control">
+    </div>
+
+    <!-- Schedule -->
+    <div class="col-md-6">
+      <label class="form-label">Send When</label>
+      <input type="datetime-local" name="when" class="form-control">
+      <small class="text-muted">Leave blank for immediate send</small>
+    </div>
+
+    <!-- Filters -->
+    <div class="col-md-4">
+      <label class="form-label">Role Filter</label>
+      <select id="roleFilter" class="form-select" onchange="applyFilters()">
+        <option value="">All Roles</option>
+        <% roles.forEach(r => { %>
+          <option value="<%= r.id %>" <%= +roleFilter === r.id ? 'selected' : '' %>><%= r.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Search</label>
+      <input id="searchInput" class="form-control" placeholder="Name or email…">
+    </div>
+
+    <!-- User table -->
+    <div class="col-12">
+      <table class="table table-bordered align-middle" id="userTable">
+        <thead class="table-light">
+          <tr>
+            <th><input type="checkbox" id="chkAll" onclick="toggleAll(this)"></th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody id="userBody">
+          <% users.forEach(u => { %>
+            <tr data-role="<%= u.role_id %>" data-name="<%= u.name.toLowerCase() %>" data-email="<%= u.email.toLowerCase() %>">
+              <td><input type="checkbox" name="recipients" value="<%= u.id %>"></td>
+              <td><%= u.name %></td>
+              <td><%= u.email %></td>
+              <td><%= u.role_name %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <nav class="d-flex justify-content-end"><ul class="pagination" id="pager"></ul></nav>
+    </div>
+
+    <div class="col-12"><button class="btn btn-primary">Schedule / Send</button></div>
+  </form>
+
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  const ROWS = [...document.querySelectorAll("#userBody tr")];
+  const pager = document.getElementById("pager");
+  const perPage = 25;
+  let curPage = 1;
+
+  const chkMaster = document.getElementById("chkAll");
+
+  function toggleAll(master){
+    document.querySelectorAll("#userBody tr").forEach(tr => {
+      if (tr.style.display !== "none") {
+        const cb = tr.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = master.checked;
+      }
+    });
+  }
+
+  function resetMaster() {
+    chkMaster.checked = false;
+  }
+
+  function applyFilters(){
+    const role = document.getElementById("roleFilter").value;
+    const q = document.getElementById("searchInput").value.toLowerCase();
+    const list = ROWS.filter(r => {
+      const roleOk = !role || r.dataset.role === role;
+      const txtOk  = r.dataset.name.includes(q) || r.dataset.email.includes(q);
+      r.dataset.show = roleOk && txtOk ? "1" : "0";
+      return roleOk && txtOk;
+    });
+    render(list);
+  }
+
+  function render(list){
+    const pages = Math.max(1, Math.ceil(list.length / perPage));
+    if (curPage > pages) curPage = 1;
+
+    ROWS.forEach(r => r.style.display = "none");
+    list.forEach((r, i) => {
+      if (i >= (curPage - 1) * perPage && i < curPage * perPage)
+        r.style.display = "";
+    });
+
+    pager.innerHTML = "";
+    for (let p = 1; p <= pages; p++) {
+      const li = document.createElement("li");
+      li.className = "page-item " + (p === curPage ? "active" : "");
+      li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+      li.onclick = e => { e.preventDefault(); curPage = p; render(list); };
+      pager.appendChild(li);
+    }
+  }
+
+  document.getElementById("searchInput")
+          .addEventListener("input", () => { curPage = 1; resetMaster(); applyFilters(); });
+  document.getElementById("roleFilter")
+          .addEventListener("change", () => { curPage = 1; resetMaster(); applyFilters(); });
+
+  window.addEventListener("DOMContentLoaded", applyFilters);
+</script>

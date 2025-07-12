@@ -1,0 +1,57 @@
+<%- include('partials/header', { pageTitle: 'Propose a Topic', activities }) %>
+
+<div class="container py-5">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Propose a New Topic</h2>
+
+  <form action="/propose-topic" method="POST" class="row g-2 mb-5">
+    <div class="col-md-4">
+      <input name="title" class="form-control" placeholder="Title" required>
+    </div>
+    <div class="col-md-4">
+      <input name="description" class="form-control" placeholder="Description">
+    </div>
+    <div class="col-md-2">
+      <select name="is_public" class="form-select">
+        <option value="1">Public</option>
+        <option value="0">Private</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100">Submit</button>
+    </div>
+  </form>
+
+  <h4>Your Proposals</h4>
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Moderator Remarks</th>
+        <th>Decided At</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% mine.forEach((p, i) => { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td><%= p.title %></td>
+          <td><%= p.status %></td>
+          <td><%= p.moderator_remarks || '-' %></td>
+          <td><%= p.decided_at ? p.decided_at.toLocaleString() : '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

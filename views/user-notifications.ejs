@@ -1,0 +1,77 @@
+<%- include('partials/header', { pageTitle: 'My Notifications' }) %>
+
+<main class="container my-4 flex-grow-1">
+
+  <h2 class="mb-4">My Notifications</h2>
+
+  <% if (success && success.length) { %>
+    <div class="alert alert-success"><%= success[0] %></div>
+  <% } %>
+  <% if (error && error.length) { %>
+    <div class="alert alert-danger"><%= error[0] %></div>
+  <% } %>
+
+  <form method="GET" class="mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label for="filter" class="form-label mb-0">Show:</label>
+      </div>
+      <div class="col-auto">
+        <select name="filter" id="filter" class="form-select" onchange="this.form.submit()">
+          <option value="unread" <%= filter === 'unread' ? 'selected' : '' %>>Unread</option>
+          <option value="read"   <%= filter === 'read'   ? 'selected' : '' %>>Read</option>
+          <option value="all"    <%= filter === 'all'    ? 'selected' : '' %>>All</option>
+        </select>
+      </div>
+    </div>
+  </form>
+
+  <% if (notifications.length === 0) { %>
+    <div class="alert alert-info">You have no <%= filter === 'read' ? 'read' : filter === 'all' ? '' : 'unread' %> notifications.</div>
+  <% } else { %>
+
+    <!-- Bulk actions -->
+    <div class="mb-3 d-flex gap-2">
+      <form method="POST" action="/notifications/mark-all-read">
+        <button class="btn btn-sm btn-outline-success">Mark All as Read</button>
+      </form>
+      <form method="POST" action="/notifications/delete-all" onsubmit="return confirm('Delete ALL filtered notifications?')">
+        <input type="hidden" name="filter" value="<%= filter %>">
+        <button class="btn btn-sm btn-outline-danger">Delete All</button>
+      </form>
+    </div>
+
+    <ul class="list-group">
+      <% notifications.forEach(n => { %>
+        <li class="list-group-item">
+          <h5><%= n.subject %></h5>
+          <div><%- n.body %></div>
+
+          <% if (n.pdf_path) { %>
+            <div class="mt-2">
+              <a class="btn btn-sm btn-outline-primary" href="/<%= n.pdf_path %>" target="_blank">
+                📎 View Attached PDF
+              </a>
+            </div>
+          <% } %>
+
+          <small class="text-muted">Received on <%= new Date(n.created_at).toLocaleString() %></small>
+
+          <div class="mt-2 d-flex gap-2">
+            <form method="POST" action="/notifications/toggle/<%= n.rec_id  %>">
+              <button class="btn btn-sm <%= n.is_read ? 'btn-secondary' : 'btn-success' %>">
+                Mark as <%= n.is_read ? 'Unread' : 'Read' %>
+              </button>
+            </form>
+            <form method="POST" action="/notifications/delete/<%= n.rec_id  %>" onsubmit="return confirm('Delete this notification?')">
+              <button class="btn btn-sm btn-danger">Delete</button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+
+  <% } %>
+</main>
+
+<%- include('partials/footer') %>

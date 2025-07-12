@@ -1,0 +1,99 @@
+<%- include('partials/header', { pageTitle: 'Permission Matrix', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+    <!-- Flash Message for Errors or Success -->
+    <% if (messages && messages.length > 0) { %>
+      <% messages.forEach(msg => { %>
+        <div class="alert alert-<%= msg.type %>">
+          <%= msg.text %>
+        </div>
+      <% }) %>
+    <% } %>
+  <h2 class="mb-4">Activity Role Permissions</h2>
+
+  <!-- Search Input -->
+  <div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search activity...">
+  </div>
+
+  <form method="post" action="/change-permissions">
+    <table class="table table-bordered" id="permissionsTable">
+      <thead>
+        <tr>
+          <th>Activity</th>
+          <% roles.forEach(role => { %>
+            <th><%= role.name %></th>
+          <% }) %>
+        </tr>
+      </thead>
+      <tbody id="activityBody">
+        <% activities.forEach(activity => { %>
+          <tr class="activity-row" data-code="<%= activity.code.toLowerCase() %>">
+            <td><%= activity.code %></td>
+            <% roles.forEach(role => {
+              const key = `${activity.id}_${role.id}`;
+            %>
+              <td>
+                <input type="checkbox" name="<%= key %>" <%= map.get(key) ? "checked" : "" %> />
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <div class="mb-3" id="paginationControls"></div>
+    <button class="btn btn-primary">Save Changes</button>
+  </form>
+</main>
+
+<%- include('partials/footer') %>
+
+<script>
+  const rowsPerPage = 5;
+  let currentPage = 1;
+  let lastSearch = '';
+
+  function filterRows() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const rows = Array.from(document.querySelectorAll('.activity-row'));
+    const filtered = rows.filter(row => row.dataset.code.includes(query));
+
+    if (query !== lastSearch) {
+      currentPage = 1;
+      lastSearch = query;
+    }
+
+    paginate(filtered);
+    renderPagination(filtered);
+  }
+
+  function paginate(rows) {
+    rows.forEach(row => row.classList.add('d-none'));
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    rows.slice(start, end).forEach(row => row.classList.remove('d-none'));
+  }
+
+  function renderPagination(rows) {
+    const totalPages = Math.ceil(rows.length / rowsPerPage);
+    const container = document.getElementById('paginationControls');
+    container.innerHTML = '';
+
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = i;
+      btn.className = 'btn btn-sm mx-1 ' + (i === currentPage ? 'btn-primary' : 'btn-outline-primary');
+      btn.onclick = () => {
+        currentPage = i;
+        paginate(rows);
+        renderPagination(rows);
+      };
+      container.appendChild(btn);
+    }
+  }
+
+  document.getElementById('searchInput').addEventListener('input', filterRows);
+  window.addEventListener('DOMContentLoaded', filterRows);
+</script>

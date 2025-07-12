@@ -1,0 +1,282 @@
+<%- include('partials/header', { pageTitle: 'Polls', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  
+
+  <!-- Flash Message for Errors or Success -->
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(msg => { %>
+      <div class="alert alert-<%= msg.type %>">
+        <%= msg.text %>
+      </div>
+    <% }) %>
+  <% } %>
+  
+  <% if (canManage) { %>
+    <h2 class="mb-4">Create Poll</h2>
+  <form action="/polls/new" method="POST" class="card card-body mb-4">
+    <div class="row g-2">
+      <!-- Poll Start Time -->
+      <div class="col-md-4">
+        <label for="start_time">START Time</label>
+        <input type="datetime-local" id="start_time" name="start_time" class="form-control" required>
+      </div>
+
+      <!-- Poll End Time -->
+      <div class="col-md-4">
+        <label for="end_time">END Time</label>
+        <input type="datetime-local" id="end_time" name="end_time" class="form-control" required>
+      </div>
+
+      <!-- Roles Multi-Select -->
+      <div class="col-md-5">
+        <label for="roles">For which roles the poll is being created?</label>
+        <!-- Use Bootstrap-select for multi-select with search functionality -->
+        <select name="roles[]" id="roles" class="form-select selectpicker" multiple required>
+          <option value="all" selected>ALL</option>
+          <% roles.forEach(role => { %>
+            <option value="<%= role.id %>"><%= role.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Add Multiple Questions -->
+      <div id="questionsWrapper">
+        <% for (let i = 0; i < 1; i++) { %> <!-- Initially show 1 question -->
+          <div class="question">
+            <input name="questions[<%= i %>][text]" class="form-control mb-2" placeholder="Question <%= i + 1 %>" required>
+
+            <select name="questions[<%= i %>][select_type]" class="form-select mb-2">
+              <option value="single">Single Select</option>
+              <option value="multi">Multi Select</option>
+            </select>
+
+            <label>Options</label>
+            <div class="optionsWrapper" id="optionsWrapper_<%= i %>">
+              <div class="option-item d-flex align-items-center mb-2">
+                <input name="options[<%= i %>][]"
+                       class="form-control me-2"
+                       placeholder="Option 1"
+                       required>
+                <button type="button" onclick="removeOption(<%= i %>, 0)" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+              </div>
+              <div class="option-item d-flex align-items-center mb-2">
+                <input name="options[<%= i %>][]"
+                       class="form-control me-2"
+                       placeholder="Option 2"
+                       required>
+                <button type="button" onclick="removeOption(<%= i %>, 1)" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+              </div>
+            </div>
+            <button type="button" onclick="addOption(<%= i %>)" class="btn btn-sm btn-secondary mb-3">+ Add Option</button>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Add More Questions Button -->
+      <div class="col-md-12">
+        <button type="button" class="btn btn-sm btn-secondary mb-3" onclick="addQuestion()">+ Add Another Question</button>
+      </div>
+
+      <!-- Poll Submit Button -->
+      <div class="col-md-12">
+        <button class="btn btn-primary float-end">Create Poll</button>
+      </div>
+    </div>
+  </form>
+  <% } %>
+  <script>
+    let questionCount = 1; // Initial number of questions
+
+    function addQuestion() {
+      questionCount++;
+      const questionDiv = document.createElement('div');
+      questionDiv.className = 'question';
+      questionDiv.innerHTML = `
+        <input name="questions[${questionCount - 1}][text]" class="form-control mb-2" placeholder="Question ${questionCount}" required>
+        <select name="questions[${questionCount - 1}][select_type]" class="form-select mb-2">
+          <option value="single">Single Select</option>
+          <option value="multi">Multi Select</option>
+        </select>
+        <label>Options</label>
+        <div class="optionsWrapper" id="optionsWrapper_${questionCount - 1}">
+          <div class="option-item d-flex align-items-center mb-2">
+            <input name="options[${questionCount - 1}][]"
+                   class="form-control me-2"
+                   placeholder="Option 1"
+                   required>
+            <button type="button" onclick="removeOption(${questionCount - 1}, 0)" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+          </div>
+          <div class="option-item d-flex align-items-center mb-2">
+            <input name="options[${questionCount - 1}][]"
+                   class="form-control me-2"
+                   placeholder="Option 2"
+                   required>
+            <button type="button" onclick="removeOption(${questionCount - 1}, 1)" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+          </div>
+        </div>
+        <button type="button" onclick="addOption(${questionCount - 1})" class="btn btn-sm btn-secondary mb-3">+ Add Option</button>
+      `;
+      document.getElementById('questionsWrapper').appendChild(questionDiv);
+    }
+
+    function addOption(questionIndex) {
+      const optionIndex = document.querySelector(`#optionsWrapper_${questionIndex}`).children.length;
+      const optionInput = document.createElement('div');
+      optionInput.className = 'option-item d-flex align-items-center mb-2';
+      optionInput.innerHTML = `
+        <input name="options[${questionIndex}][]"
+               class="form-control me-2"
+               placeholder="Option ${optionIndex + 1}"
+               required>
+        <button type="button" onclick="removeOption(${questionIndex}, ${optionIndex})" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+      `;
+      document.querySelector(`#optionsWrapper_${questionIndex}`).appendChild(optionInput);
+    }
+
+    function removeOption(questionIndex, optionIndex) {
+      const wrapper = document.querySelector(`#optionsWrapper_${questionIndex}`);
+      if (wrapper.children.length > 2) {
+        wrapper.children[optionIndex].remove();
+      } else {
+        alert('Need at least 2 options');
+      }
+    }
+
+    // Set default date and time for start and end times
+    window.onload = function() {
+      const now = new Date();
+      // Calculate start and end times
+      const startTime = new Date(now.getTime() + 10 * 60000); // 10 minutes from now
+      const endTime = new Date(now.getTime() + 2 * 60 * 60000); // 2 hours from now
+
+     // Function to format the date as YYYY-MM-DDTHH:mm
+    const formatDateTime = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+      // Set the default start and end times
+      document.getElementById('start_time').value = formatDateTime(startTime);
+      document.getElementById('end_time').value = formatDateTime(endTime);
+    };
+
+    // Initialize the Bootstrap-select
+    document.addEventListener('DOMContentLoaded', function() {
+      $('.selectpicker').selectpicker();
+    });
+  </script>
+
+    <h2 class="mb-4">Polls</h2>
+
+  
+    <table class="table table-bordered align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Poll Question</th>
+          <th>Status</th>
+          <th>Participants</th>
+          <th>Voted?</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <% if (canManage) { %><th>Actions</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% polls.forEach(p => { %>
+          <tr>
+            <!-- Display Poll Title and link to the poll details -->
+            <td><a href="/polls/<%= p.id %>"><%= p.questions[0] ? p.questions[0].question : 'No Question' %></a></td>
+            <td>
+              <% if (p.not_yet) { %> Yet to begin
+              <% } else if (p.is_open) { %> Open
+              <% } else { %> Closed
+              <% } %>
+            </td>
+            <td><%= p.participants %></td>
+            <td class="text-center">
+              <% if (p.has_voted) { %>
+                <span class="badge bg-success">Yes</span>
+              <% } else { %>
+                <span class="badge bg-danger">No</span>
+              <% } %>
+            </td>
+            <td><%= p.open_time %></td>
+            <td><%= p.close_time %></td>
+  
+            <% if (canManage) { %>
+            <td>
+            <!-- Show Edit button if poll hasn't started or if no votes have been cast -->
+            <% if (p.not_yet || (p.is_open &&!p.participants)) { %>
+              <a href="/polls/edit/<%= p.id %>" class="btn btn-sm btn-primary">Edit</a>
+            <% } %>
+
+            <% if (p.is_open && p.participants) { %>
+              <button class="btn btn-sm btn-warning" onclick="showExtendModal(<%= p.id %>, '<%= p.close_time %>')">Modify End Time</button>
+            <% } %>
+
+            <!-- Show Delete button for all polls -->
+            
+              <form action="/polls/delete/<%= p.id %>" method="POST" onsubmit="return confirm('Delete poll?')">
+                <button class="btn btn-sm btn-danger">Delete</button>
+              </form>
+
+          </td>
+            <% } %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+<!-- Extend Poll Modal -->
+<div class="modal fade" id="extendPollModal" tabindex="-1" aria-labelledby="extendPollModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="extendPollModalLabel">Extend Poll</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="extendPollForm" action="" method="POST">
+          <div class="mb-3">
+            <label for="new_end_time" class="form-label">New End Time</label>
+            <input type="datetime-local" class="form-control" id="new_end_time" name="new_end_time" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="submitExtendPollForm()">Modify End Time </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // Function to show the Extend Poll modal with the current poll end time prefilled
+  function showExtendModal(pollId, currentEndTime) {
+    // Set the action URL for the form
+    document.getElementById('extendPollForm').action = '/polls/extend/' + pollId;
+    
+    // Set the input value for the new end time
+    document.getElementById('new_end_time').value = currentEndTime.slice(0, 16); // Remove milliseconds part
+    
+    // Show the modal
+    const myModal = new bootstrap.Modal(document.getElementById('extendPollModal'));
+    myModal.show();
+  }
+
+  // Function to submit the form after extending the poll
+  function submitExtendPollForm() {
+    document.getElementById('extendPollForm').submit();
+  }
+</script>
+  
+</main>
+
+<%- include('partials/footer') %>

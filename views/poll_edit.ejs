@@ -1,0 +1,118 @@
+<%- include('partials/header', { pageTitle: 'Edit Poll', activities }) %>
+
+<main class="container py-5 flex-grow-1">
+  <h2>Edit Poll</h2>
+
+  <!-- Flash Message for Errors or Success -->
+  <% if (messages && messages.length > 0) { %>
+    <% messages.forEach(msg => { %>
+      <div class="alert alert-<%= msg.type %>">
+        <%= msg.text %>
+      </div>
+    <% }) %>
+  <% } %>
+  
+
+  <form action="/polls/edit/<%= poll.id %>" method="POST" class="card card-body mb-4">
+    <div class="row g-2">
+      <!-- Poll Start Time -->
+      <div class="col-md-4">
+        <input type="datetime-local" id="start_time" name="start_time" class="form-control" value="<%= poll.open_time %>" required>
+      </div>
+
+      <!-- Poll End Time -->
+      <div class="col-md-4">
+        <input type="datetime-local" id="end_time" name="end_time" class="form-control" value="<%=poll.close_time %>" required>
+      </div>
+
+      <!-- Roles Multi-Select -->
+      <div class="col-md-5">
+        <label for="roles">Roles</label>
+        <select name="roles[]" id="roles" class="form-select" multiple required>
+          <option value="all">ALL</option>
+          <% roles.forEach(role => { %>
+            <option value="<%= role.id %>" <%= assignedRoles.includes(role.id) ? 'selected' : '' %>> <%= role.name %> </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Questions and Options -->
+      <div id="questionsWrapper">
+        <% questions.forEach((question, index) => { %>
+          <div class="question">
+            <input name="questions[<%= index %>][text]" class="form-control mb-2" value="<%= question.question %>" placeholder="Question <%= index + 1 %>" required>
+            <select name="questions[<%= index %>][select_type]" class="form-select mb-2">
+              <option value="single" <%= question.select_type === 'single' ? 'selected' : '' %>>Single Select</option>
+              <option value="multi" <%= question.select_type === 'multi' ? 'selected' : '' %>>Multi Select</option>
+            </select>
+
+            <label>Options</label>
+            <div class="optionsWrapper" id="optionsWrapper_<%= index %>">
+              <% options[index].forEach((opt, optionIndex) => { %>
+                <div class="option-item d-flex align-items-center mb-2">
+                  <input name="options[<%= index %>][]"
+                         class="form-control me-2"
+                         value="<%= opt.option_text %>"
+                         placeholder="Option <%= optionIndex + 1 %>"
+                         required>
+                  <button type="button" onclick="removeOption(<%= index %>, <%= optionIndex %>)" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+                </div>
+              <% }) %>
+            </div>
+            <button type="button" onclick="addOption(<%= index %>)" class="btn btn-sm btn-secondary mb-3">+ Add Option</button>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Poll Submit Button -->
+      <div class="col-md-12">
+        <button class="btn btn-primary float-end">Update Poll</button>
+      </div>
+    </div>
+  </form>
+
+  <script>
+    function addOption(questionIndex) {
+      const optionIndex = document.querySelector(`#optionsWrapper_${questionIndex}`).children.length;
+      const optionInput = document.createElement('div');
+      optionInput.className = 'option-item d-flex align-items-center mb-2';
+      optionInput.innerHTML = `
+        <input name="options[${questionIndex}][]"
+               class="form-control me-2"
+               placeholder="Option ${optionIndex + 1}"
+               required>
+        <button type="button" onclick="removeOption(${questionIndex}, ${optionIndex})" class="btn btn-sm btn-danger p-1" style="border-radius: 50%; font-size: 18px; background-color: transparent; color: #dc3545;">&times;</button>
+      `;
+      document.querySelector(`#optionsWrapper_${questionIndex}`).appendChild(optionInput);
+    }
+
+    function removeOption(questionIndex, optionIndex) {
+      const wrapper = document.querySelector(`#optionsWrapper_${questionIndex}`);
+      if (wrapper.children.length > 2) {
+        wrapper.children[optionIndex].remove();
+      } else {
+        alert('Need at least 2 options');
+      }
+    }
+        // Set default date and time for start and end times
+        window.onload = function() {
+     // Function to format the date as YYYY-MM-DDTHH:mm
+    const formatDateTime = (D) => {
+      const date = new Date(D);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+      // Set the default start and end times
+      document.getElementById('start_time').value = formatDateTime("<%= poll.open_time %>");
+      document.getElementById('end_time').value = formatDateTime("<%= poll.close_time %>");
+    };
+  </script>
+
+</main>
+
+<%- include('partials/footer') %>
